@@ -3,13 +3,15 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: TraceLock synthetic identity incident investigation and containment simulation API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: incidents
+    description: Synthetic identity incident reconstruction and verification
 paths:
   /healthz:
     get:
@@ -24,6 +26,58 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /incidents/current:
+    get:
+      operationId: getCurrentIncident
+      tags: [incidents]
+      summary: Reconstruct the current synthetic identity incident
+      description: Returns structured scenario entities, audit evidence, reconstructed attack paths, and simulation assumptions.
+      responses:
+        "200":
+          description: Reconstructed incident snapshot
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/IncidentSnapshot"
+  /incidents/current/remediations:
+    get:
+      operationId: getIncidentRemediations
+      tags: [incidents]
+      summary: List candidate containment actions
+      responses:
+        "200":
+          description: Candidate actions for the current synthetic incident
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/RemediationAction"
+  /incidents/current/simulations:
+    post:
+      operationId: simulateContainment
+      tags: [incidents]
+      summary: Apply simulated remediations and verify reachability
+      description: Applies selected changes to a copied graph and independently recomputes all reachable attack paths.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SimulationInput"
+      responses:
+        "200":
+          description: Graph-derived containment verification report
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VerificationReport"
+        "400":
+          description: Invalid simulation request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -33,4 +87,157 @@ components:
           type: string
       required:
         - status
+    Incident:
+      type: object
+      required: [id, title, status, severity, detectedAt, summary]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        status: { type: string }
+        severity: { type: string }
+        detectedAt: { type: string, format: date-time }
+        summary: { type: string }
+    Identity:
+      type: object
+      required: [id, name, kind, compromised, status, detail]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        kind: { type: string, enum: [user, service] }
+        compromised: { type: boolean }
+        status: { type: string }
+        detail: { type: string }
+    Role:
+      type: object
+      required: [id, name, privilege, detail]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        privilege: { type: string }
+        detail: { type: string }
+    Resource:
+      type: object
+      required: [id, name, sensitivity, detail]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        sensitivity: { type: string }
+        detail: { type: string }
+    AccessEdge:
+      type: object
+      required: [id, sourceId, targetId, relationship, enabled, eventIds]
+      properties:
+        id: { type: string }
+        sourceId: { type: string }
+        targetId: { type: string }
+        relationship: { type: string }
+        enabled: { type: boolean }
+        eventIds:
+          type: array
+          items: { type: string }
+    AuditEvent:
+      type: object
+      required: [id, timestamp, actorId, action, targetId, result, sourceIp, summary]
+      properties:
+        id: { type: string }
+        timestamp: { type: string, format: date-time }
+        actorId: { type: string }
+        action: { type: string }
+        targetId: { type: string }
+        result: { type: string }
+        sourceIp: { type: string }
+        summary: { type: string }
+    AttackPath:
+      type: object
+      required: [id, label, nodeIds, edgeIds]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        nodeIds:
+          type: array
+          items: { type: string }
+        edgeIds:
+          type: array
+          items: { type: string }
+    RemediationAction:
+      type: object
+      required: [id, title, description, expectedEffect, category, edgeIds]
+      properties:
+        id:
+          type: string
+          enum: [revoke-user-session, restrict-admin-role, revoke-app-consent]
+        title: { type: string }
+        description: { type: string }
+        expectedEffect: { type: string }
+        category: { type: string }
+        edgeIds:
+          type: array
+          items: { type: string }
+    IncidentSnapshot:
+      type: object
+      required: [incident, identities, roles, resources, edges, auditEvents, attackPaths, remediations, assumptions]
+      properties:
+        incident: { $ref: "#/components/schemas/Incident" }
+        identities:
+          type: array
+          items: { $ref: "#/components/schemas/Identity" }
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/Role" }
+        resources:
+          type: array
+          items: { $ref: "#/components/schemas/Resource" }
+        edges:
+          type: array
+          items: { $ref: "#/components/schemas/AccessEdge" }
+        auditEvents:
+          type: array
+          items: { $ref: "#/components/schemas/AuditEvent" }
+        attackPaths:
+          type: array
+          items: { $ref: "#/components/schemas/AttackPath" }
+        remediations:
+          type: array
+          items: { $ref: "#/components/schemas/RemediationAction" }
+        assumptions:
+          type: array
+          items: { type: string }
+    SimulationInput:
+      type: object
+      required: [actionIds]
+      properties:
+        actionIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          items:
+            type: string
+            enum: [revoke-user-session, restrict-admin-role, revoke-app-consent]
+    VerificationReport:
+      type: object
+      required: [status, appliedActions, verifiedClosedPaths, remainingReachablePaths, unresolvedFindings, assumptions]
+      properties:
+        status:
+          type: string
+          enum: [verified-contained, incomplete]
+        appliedActions:
+          type: array
+          items: { $ref: "#/components/schemas/RemediationAction" }
+        verifiedClosedPaths:
+          type: array
+          items: { $ref: "#/components/schemas/AttackPath" }
+        remainingReachablePaths:
+          type: array
+          items: { $ref: "#/components/schemas/AttackPath" }
+        unresolvedFindings:
+          type: array
+          items: { type: string }
+        assumptions:
+          type: array
+          items: { type: string }
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string }
 

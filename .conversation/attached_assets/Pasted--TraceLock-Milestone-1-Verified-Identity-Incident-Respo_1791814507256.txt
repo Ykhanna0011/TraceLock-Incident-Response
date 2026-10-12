@@ -1,0 +1,100 @@
+# TraceLock — Milestone 1: Verified Identity Incident Response
+
+Build a functional, software-only defensive cybersecurity web application named **TraceLock**.
+
+## Objective
+
+Create a working identity-incident investigation application that reconstructs a simulated cloud identity attack, proposes a containment action, and independently verifies whether that action closes the attack path.
+
+This milestone is about working security logic. Do not build a static mockup or fabricate successful verification results.
+
+## Technology
+
+- Frontend: React, TypeScript, Vite.
+- Backend: Node.js, Express, TypeScript.
+- Styling: polished, responsive cybersecurity SaaS interface.
+- Use deterministic synthetic data.
+- Do not require API keys in this milestone.
+- Do not connect to real cloud accounts or execute real security actions.
+
+## Main interface
+
+Create a professional dark-themed security operations interface with:
+
+1. Overview showing incident status, affected identities, attack paths and verification results.
+2. Incident timeline showing timestamped synthetic audit events.
+3. Attack-path graph displaying identities, roles, resources and relationships.
+4. Containment panel displaying proposed actions and their expected effects.
+5. Verification report showing which attack paths remain reachable after a proposed change.
+6. Evidence panel linking findings to the synthetic audit events that support them.
+
+## Required demonstration scenario
+
+Create a deterministic synthetic environment containing:
+
+- A compromised user identity.
+- A privileged role reachable from that identity.
+- A sensitive resource.
+- A second, alternate route to the sensitive resource through a separate service identity or role.
+- Synthetic audit events recording the relevant identity activity and access relationships.
+
+The application must reconstruct the attack paths from structured scenario data and audit events. Display the paths visually.
+
+## Containment simulation
+
+Implement at least two candidate remediation actions, such as:
+
+- Revoking the compromised user's session.
+- Restricting the compromised user's privileged role.
+
+The simulator must recompute reachability after each proposed change.
+
+At least one action must be insufficient on its own because an alternate path remains open. TraceLock must explicitly reject that action as a complete containment solution and explain which path remains reachable.
+
+Implement a second action or combination of actions that closes the known paths in the synthetic scenario. Verify this independently using the updated graph.
+
+Do not hardcode the verification result based solely on the selected action. Derive it from the graph and the applied simulated changes.
+
+## Backend and testing
+
+Create typed data structures for identities, roles, resources, audit events, attack paths and remediation actions.
+
+Implement separate functions for:
+
+- Loading the scenario.
+- Reconstructing paths.
+- Generating candidate remediations.
+- Applying a remediation to a copied scenario state.
+- Recomputing reachability.
+- Producing a verification report.
+
+Write automated tests proving that:
+
+1. The initial scenario exposes the expected attack path.
+2. An incomplete remediation is rejected when another path remains open.
+3. A complete remediation closes the known paths.
+4. The original scenario is not mutated by a simulated action.
+5. Repeated runs of the same scenario produce consistent results.
+
+## User experience
+
+Provide a clear "Investigate incident" action, selectable remediation candidates, a "Simulate and verify" action, and a final report that distinguishes:
+
+- Verified closed paths.
+- Remaining reachable paths.
+- Unresolved findings.
+- Assumptions and simulation limitations.
+
+The user must be able to see why a remediation passed or failed.
+
+## Constraints
+
+This is a defensive, synthetic simulation. Never execute commands against real infrastructure, revoke real credentials, or imply that a simulated result proves a real cloud environment is secure.
+
+Do not add authentication, billing, multi-tenancy, integrations, or unnecessary features yet.
+
+## Acceptance criteria
+
+The app must run successfully in Replit. The main interaction must work end to end. The graph, remediation actions, and verification results must be derived from the scenario data. Automated tests must pass.
+
+Prioritize correctness, a polished interface, and an unmistakable demonstration of incomplete versus successful containment. After implementing, run the tests and fix any failures. Report what works and any remaining issues honestly.

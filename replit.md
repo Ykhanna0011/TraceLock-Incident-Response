@@ -1,44 +1,42 @@
-# [Project name]
+# TraceLock
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+A defensive identity-incident simulator that reconstructs synthetic cloud access paths and verifies containment by recomputing reachability.
 
 ## Run & Operate
 
-- `pnpm --filter @workspace/api-server run dev` — run the API server (port 5000)
+- `pnpm --filter @workspace/api-server run dev` — run the shared Express API
+- `pnpm --filter @workspace/tracelock run dev` — run the TraceLock web app
 - `pnpm run typecheck` — full typecheck across all packages
-- `pnpm run build` — typecheck + build all packages
+- `pnpm --filter @workspace/api-server run test` — run the incident-engine tests
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
-- `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
 
 ## Stack
 
 - pnpm workspaces, Node.js 24, TypeScript 5.9
-- API: Express 5
-- DB: PostgreSQL + Drizzle ORM
-- Validation: Zod (`zod/v4`), `drizzle-zod`
+- Frontend: React, TypeScript, Vite
+- API: Express 5, with Zod request/response validation
 - API codegen: Orval (from OpenAPI spec)
-- Build: esbuild (CJS bundle)
+- Tests: Node's built-in test runner
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/tracelock/src/pages/investigation.tsx` — incident investigation interface
+- `artifacts/tracelock/src/index.css` — visual theme and responsive layout
+- `artifacts/api-server/src/lib/incident-engine.ts` — synthetic scenario and graph simulation logic
+- `artifacts/api-server/src/routes/incidents.ts` — incident and simulation API
+- `lib/api-spec/openapi.yaml` — API contract source of truth
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- Milestone 1 uses deterministic synthetic data and does not connect to a database or real cloud accounts.
+- Each remediation is applied to a copied scenario graph. Verification independently recomputes paths from enabled edges; it is not selected-action-based.
+- Audit events link to access relationships so the investigation can trace graph findings to evidence.
+- This app simulates defensive response only; it never revokes real sessions, roles, or application grants.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
-
-## User preferences
-
-_Populate as you build — explicit user instructions worth remembering across sessions._
-
-## Gotchas
-
-_Populate as you build — sharp edges, "always run X before Y" rules._
+- Use the dark operations console to investigate a compromised identity, inspect reconstructed paths and synthetic audit evidence, select containment actions, and compare verified closed paths with any remaining reachable paths.
+- The demonstration includes an insufficient single action and a successful multi-action containment combination.
 
 ## Pointers
 

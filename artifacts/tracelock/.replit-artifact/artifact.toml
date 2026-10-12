@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "TraceLock"
+description = "A defensive identity incident-response simulator that reconstructs synthetic cloud attack paths, models containment actions, and independently verifies whether known routes to sensitive resources remain reachable."
+version = "1.0.0"
+id = "artifacts/tracelock"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18457
+
+[services.development]
+run = "pnpm --filter @workspace/tracelock run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/tracelock", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/tracelock/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18457"
+BASE_PATH = "/"
