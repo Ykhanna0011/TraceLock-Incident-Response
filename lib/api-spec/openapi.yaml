@@ -78,6 +78,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /incidents/current/ai-investigations:
+    post:
+      operationId: runAiIncidentInvestigation
+      tags: [incidents]
+      summary: Run a Nemotron-assisted synthetic incident investigation
+      description: Executes allowlisted application tools and returns model analysis alongside independently recomputed graph verification.
+      responses:
+        "200":
+          description: Completed AI-assisted investigation with authoritative verification
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AiInvestigationResponse"
+        "429":
+          description: Nebius Token Factory rate limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "502":
+          description: Model provider or response validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Nebius API credentials are not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "504":
+          description: Model request timed out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 components:
   schemas:
     HealthStatus:
@@ -235,6 +272,66 @@ components:
         assumptions:
           type: array
           items: { type: string }
+    AiToolName:
+      type: string
+      enum:
+        - get_incident_timeline
+        - enumerate_attack_paths
+        - inspect_identity
+        - simulate_remediation
+        - verify_containment
+    AiToolExecution:
+      type: object
+      required: [toolName, status, summary, evidenceIds]
+      properties:
+        toolName: { $ref: "#/components/schemas/AiToolName" }
+        status:
+          type: string
+          enum: [success, rejected]
+        summary: { type: string }
+        evidenceIds:
+          type: array
+          items: { type: string }
+    AiInvestigationFinding:
+      type: object
+      required: [kind, text, evidenceIds]
+      properties:
+        kind:
+          type: string
+          enum: [verified-fact, model-hypothesis]
+        text: { type: string }
+        evidenceIds:
+          type: array
+          minItems: 1
+          items: { type: string }
+    AiInvestigationSimulation:
+      type: object
+      required: [action, verification]
+      properties:
+        action: { $ref: "#/components/schemas/RemediationAction" }
+        verification: { $ref: "#/components/schemas/VerificationReport" }
+    AiInvestigationResponse:
+      type: object
+      required: [modelId, explanation, findings, toolExecutions, inspectedEvidence, candidateActions, simulations, verification]
+      properties:
+        modelId: { type: string }
+        explanation: { type: string }
+        findings:
+          type: array
+          items: { $ref: "#/components/schemas/AiInvestigationFinding" }
+        toolExecutions:
+          type: array
+          items: { $ref: "#/components/schemas/AiToolExecution" }
+        inspectedEvidence:
+          type: array
+          items: { $ref: "#/components/schemas/AuditEvent" }
+        candidateActions:
+          type: array
+          items: { $ref: "#/components/schemas/RemediationAction" }
+        simulations:
+          type: array
+          items: { $ref: "#/components/schemas/AiInvestigationSimulation" }
+        verification: { $ref: "#/components/schemas/VerificationReport" }
     ErrorResponse:
       type: object
       required: [error]

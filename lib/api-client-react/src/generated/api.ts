@@ -20,6 +20,7 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AiInvestigationResponse,
   ErrorResponse,
   HealthStatus,
   IncidentSnapshot,
@@ -375,5 +376,80 @@ export const useSimulateContainment = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getSimulateContainmentMutationOptions(options));
+    }
+
+export const getRunAiIncidentInvestigationUrl = () => {
+
+
+
+
+  return `/api/incidents/current/ai-investigations`
+}
+
+/**
+ * Executes allowlisted application tools and returns model analysis alongside independently recomputed graph verification.
+ * @summary Run a Nemotron-assisted synthetic incident investigation
+ */
+export const runAiIncidentInvestigation = async ( options?: Parameters<typeof customFetch>[1]): Promise<AiInvestigationResponse> => {
+
+  return customFetch<AiInvestigationResponse>(getRunAiIncidentInvestigationUrl(),
+  {
+    ...options,
+    method: 'POST'
+
+
+  }
+);}
+
+
+
+
+
+export const getRunAiIncidentInvestigationMutationKey = () => ['runAiIncidentInvestigation'] as const;
+
+export const getRunAiIncidentInvestigationMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runAiIncidentInvestigation>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof runAiIncidentInvestigation>>, TError,void, TContext> => {
+
+const mutationKey = getRunAiIncidentInvestigationMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof runAiIncidentInvestigation>>, void> = () => {
+
+
+          return  runAiIncidentInvestigation(requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RunAiIncidentInvestigationMutationResult = NonNullable<Awaited<ReturnType<typeof runAiIncidentInvestigation>>>
+
+    export type RunAiIncidentInvestigationMutationError = ErrorType<ErrorResponse>
+
+
+    /**
+ * @summary Run a Nemotron-assisted synthetic incident investigation
+ */
+export const useRunAiIncidentInvestigation = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof runAiIncidentInvestigation>>, TError,void, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof runAiIncidentInvestigation>>,
+        TError,
+        void,
+        TContext
+      > => {
+      return useMutation(getRunAiIncidentInvestigationMutationOptions(options));
     }
 

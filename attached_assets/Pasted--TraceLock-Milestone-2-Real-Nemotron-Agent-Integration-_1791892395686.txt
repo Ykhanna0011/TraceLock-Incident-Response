@@ -1,0 +1,84 @@
+# TraceLock — Milestone 2: Real Nemotron Agent Integration
+
+Extend the existing working TraceLock application. Do not replace the project, rewrite the UI, or break the six existing incident-engine tests.
+
+## Goal
+
+Integrate NVIDIA Nemotron through Nebius Token Factory so TraceLock performs a genuine multi-step incident investigation using its existing deterministic security engine.
+
+## 1. Connect to Nebius Token Factory
+
+Use the OpenAI-compatible API:
+
+- Base URL: https://api.tokenfactory.nebius.com/v1/
+- API key: NEBIUS_API_KEY, configured as a Replit Secret.
+- Start with the currently documented model ID `nvidia/Nemotron-3_5-Lightning`; verify that it is available to the configured account.
+- Keep all API calls on the backend. Never expose the API key to browser code or logs.
+
+Use the official SDK or a compatible server-side client. Handle missing credentials, rate limits, timeouts, and API errors gracefully.
+
+## 2. Implement a real investigation workflow
+
+Add a backend endpoint for an AI-assisted investigation. The agent should be able to request and use a limited set of existing application tools:
+
+- `get_incident_timeline`: retrieve synthetic audit events relevant to the incident.
+- `enumerate_attack_paths`: retrieve the attack paths computed by the deterministic engine.
+- `inspect_identity`: retrieve an identity's privileges and relevant relationships.
+- `simulate_remediation`: evaluate a proposed action against a copied scenario state.
+- `verify_containment`: independently recompute reachability after simulated changes.
+
+Use actual model tool calls or an equally explicit, validated tool-orchestration loop. The backend must execute only allowlisted tools with validated arguments. Limit the number of iterations and prevent unbounded loops.
+
+The agent should investigate the incident, inspect evidence, consider remediation options, request simulations, and explain the resulting findings.
+
+## 3. Preserve the security boundary
+
+The model must not determine whether containment passed simply by asserting that it did.
+
+- The deterministic engine remains authoritative for graph reachability and verification.
+- Recompute the result after each simulated change.
+- If any known attack path remains reachable, report incomplete containment.
+- Every finding must reference actual synthetic event IDs or computed graph evidence.
+- Clearly label model-generated hypotheses separately from verified facts.
+- Never execute real cloud actions or connect to production identities.
+
+## 4. Update the interface
+
+Add an "AI Investigate" action to the existing interface.
+
+Show:
+- Investigation steps and the tools actually executed.
+- Evidence inspected by the agent.
+- Candidate remediation actions and simulation outcomes.
+- The final verification result from the deterministic engine.
+- A concise AI-generated explanation of why the proposed action passed or failed.
+- Clear loading and error states.
+
+Do not simulate model activity with fake progress messages or hardcoded AI responses.
+
+## 5. Add tests and an evaluation report
+
+Preserve all existing tests and add tests for:
+
+1. Successful runtime model integration when credentials are configured.
+2. Graceful behavior when credentials are missing or the API fails.
+3. Invalid tool arguments being rejected.
+4. The model being unable to override a failed deterministic verification.
+5. Evidence references corresponding to actual scenario records.
+6. Repeated investigation runs preserving the scenario's original state.
+
+Use mocked model responses for automated tests; do not require paid API calls in every test.
+
+## 6. Acceptance criteria
+
+The milestone is complete only when:
+
+- The existing application still runs.
+- All existing and new automated tests pass.
+- A live test demonstrates an actual Nemotron inference call through Token Factory.
+- The agent executes a multi-step workflow using real application tools.
+- The interface shows the actual investigation results.
+- Incomplete containment is rejected even if the model recommends it.
+- No API secrets are exposed to the client.
+
+After implementation, report the files changed, tests run, and whether a real inference call was successfully verified. Be honest about anything that could not be tested.

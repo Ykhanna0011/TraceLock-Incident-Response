@@ -7,6 +7,13 @@
  */
 
 export * from './accessEdge';
+export * from './aiInvestigationFinding';
+export * from './aiInvestigationFindingKind';
+export * from './aiInvestigationResponse';
+export * from './aiInvestigationSimulation';
+export * from './aiToolExecution';
+export * from './aiToolExecutionStatus';
+export * from './aiToolName';
 export * from './attackPath';
 export * from './auditEvent';
 export * from './errorResponse';

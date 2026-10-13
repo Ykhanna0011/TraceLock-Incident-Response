@@ -138,3 +138,105 @@ export const SimulateContainmentResponse = zod.object({
 })
 
 
+/**
+ * Executes allowlisted application tools and returns model analysis alongside independently recomputed graph verification.
+ * @summary Run a Nemotron-assisted synthetic incident investigation
+ */
+
+
+
+export const RunAiIncidentInvestigationResponse = zod.object({
+  "modelId": zod.string(),
+  "explanation": zod.string(),
+  "findings": zod.array(zod.object({
+  "kind": zod.enum(['verified-fact', 'model-hypothesis']),
+  "text": zod.string(),
+  "evidenceIds": zod.array(zod.string()).min(1)
+})),
+  "toolExecutions": zod.array(zod.object({
+  "toolName": zod.enum(['get_incident_timeline', 'enumerate_attack_paths', 'inspect_identity', 'simulate_remediation', 'verify_containment']),
+  "status": zod.enum(['success', 'rejected']),
+  "summary": zod.string(),
+  "evidenceIds": zod.array(zod.string())
+})),
+  "inspectedEvidence": zod.array(zod.object({
+  "id": zod.string(),
+  "timestamp": zod.coerce.date(),
+  "actorId": zod.string(),
+  "action": zod.string(),
+  "targetId": zod.string(),
+  "result": zod.string(),
+  "sourceIp": zod.string(),
+  "summary": zod.string()
+})),
+  "candidateActions": zod.array(zod.object({
+  "id": zod.enum(['revoke-user-session', 'restrict-admin-role', 'revoke-app-consent']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "expectedEffect": zod.string(),
+  "category": zod.string(),
+  "edgeIds": zod.array(zod.string())
+})),
+  "simulations": zod.array(zod.object({
+  "action": zod.object({
+  "id": zod.enum(['revoke-user-session', 'restrict-admin-role', 'revoke-app-consent']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "expectedEffect": zod.string(),
+  "category": zod.string(),
+  "edgeIds": zod.array(zod.string())
+}),
+  "verification": zod.object({
+  "status": zod.enum(['verified-contained', 'incomplete']),
+  "appliedActions": zod.array(zod.object({
+  "id": zod.enum(['revoke-user-session', 'restrict-admin-role', 'revoke-app-consent']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "expectedEffect": zod.string(),
+  "category": zod.string(),
+  "edgeIds": zod.array(zod.string())
+})),
+  "verifiedClosedPaths": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "nodeIds": zod.array(zod.string()),
+  "edgeIds": zod.array(zod.string())
+})),
+  "remainingReachablePaths": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "nodeIds": zod.array(zod.string()),
+  "edgeIds": zod.array(zod.string())
+})),
+  "unresolvedFindings": zod.array(zod.string()),
+  "assumptions": zod.array(zod.string())
+})
+})),
+  "verification": zod.object({
+  "status": zod.enum(['verified-contained', 'incomplete']),
+  "appliedActions": zod.array(zod.object({
+  "id": zod.enum(['revoke-user-session', 'restrict-admin-role', 'revoke-app-consent']),
+  "title": zod.string(),
+  "description": zod.string(),
+  "expectedEffect": zod.string(),
+  "category": zod.string(),
+  "edgeIds": zod.array(zod.string())
+})),
+  "verifiedClosedPaths": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "nodeIds": zod.array(zod.string()),
+  "edgeIds": zod.array(zod.string())
+})),
+  "remainingReachablePaths": zod.array(zod.object({
+  "id": zod.string(),
+  "label": zod.string(),
+  "nodeIds": zod.array(zod.string()),
+  "edgeIds": zod.array(zod.string())
+})),
+  "unresolvedFindings": zod.array(zod.string()),
+  "assumptions": zod.array(zod.string())
+})
+})
+
+

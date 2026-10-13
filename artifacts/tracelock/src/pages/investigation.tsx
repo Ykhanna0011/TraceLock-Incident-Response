@@ -5,13 +5,15 @@ import {
   useGetIncidentRemediations,
   getGetIncidentRemediationsQueryKey,
   useSimulateContainment,
+  useRunAiIncidentInvestigation,
 } from '@workspace/api-client-react';
-import type { AttackPath, IncidentSnapshot, RemediationAction, VerificationReport } from '@workspace/api-client-react';
+import type { AiInvestigationResponse, AuditEvent, AttackPath, IncidentSnapshot, RemediationAction, VerificationReport } from '@workspace/api-client-react';
 import {
   Activity, AlertTriangle, ArrowDown, ArrowRight, Check, CheckCircle2,
   ChevronDown, CircleDot, Clock3, Database, Fingerprint, KeyRound,
   LockKeyhole, Network, RotateCcw, Shield, ShieldAlert, ShieldCheck,
-  UserRound, Workflow, X,
+  UserRound, Workflow, X, BrainCircuit, Cpu, FileSearch, FlaskConical,
+  ListChecks, ScanSearch,
 } from 'lucide-react';
 
 type ActionId = 'revoke-user-session' | 'restrict-admin-role' | 'revoke-app-consent';
@@ -101,12 +103,12 @@ function PathCard({ path, onFocus, focused }: { path: AttackPath; onFocus: () =>
   </button>;
 }
 
-function ReportPanel({ report }: { report: VerificationReport }) {
+function ReportPanel({ report, reportId = 'verification-report', eyebrow = 'SIMULATION RESULT', testId = 'verification-report' }: { report: VerificationReport; reportId?: string; eyebrow?: string; testId?: string }) {
   const contained = report.status === 'verified-contained';
-  return <section className={`report-panel ${contained ? 'report-contained' : 'report-incomplete'}`} id="verification-report" data-testid="verification-report">
+  return <section className={`report-panel ${contained ? 'report-contained' : 'report-incomplete'}`} id={reportId} data-testid={testId}>
     <div className="report-heading">
       <div className={`report-symbol ${contained ? '' : 'symbol-warning'}`}>{contained ? <ShieldCheck size={22} /> : <ShieldAlert size={22} />}</div>
-      <div><span className="eyebrow">SIMULATION RESULT</span><h2>{contained ? 'Reachability verified contained' : 'Containment remains incomplete'}</h2><p>{contained ? 'The altered graph has no reachable attack paths under the selected changes.' : 'At least one path to sensitive data is still reachable in the altered graph.'}</p></div>
+      <div><span className="eyebrow">{eyebrow}</span><h2>{contained ? 'Reachability verified contained' : 'Containment remains incomplete'}</h2><p>{contained ? 'The altered graph has no reachable attack paths under the selected changes.' : 'At least one path to sensitive data is still reachable in the altered graph.'}</p></div>
     </div>
     <div className="report-grid">
       <div className="report-block closed"><span className="report-count">{report.verifiedClosedPaths.length}</span><span className="report-label">Closed paths</span><div className="report-list">{report.verifiedClosedPaths.length ? report.verifiedClosedPaths.map((path) => <span key={path.id}><Check size={13} />{path.label}</span>) : <span className="report-empty">No paths verified closed.</span>}</div></div>
@@ -117,10 +119,84 @@ function ReportPanel({ report }: { report: VerificationReport }) {
   </section>;
 }
 
+function EvidenceIds({ ids }: { ids: string[] }) {
+  return ids.length
+    ? <div className="ai-evidence-ids" data-testid="ai-evidence-ids">{ids.map((id) => <code key={id}>{id}</code>)}</div>
+    : <span className="ai-no-evidence">No evidence IDs returned</span>;
+}
+
+function AiAuditEvent({ event }: { event: AuditEvent }) {
+  return <article className="ai-audit-event" data-testid={`ai-inspected-evidence-${event.id}`}>
+    <div className="ai-audit-head"><span className="mono">{timeLabel(event.timestamp)}</span><span className={`result-chip ${event.result.toLowerCase().includes('success') || event.result.toLowerCase().includes('allow') ? 'result-success' : ''}`}>{event.result}</span></div>
+    <strong>{event.action}</strong>
+    <p>{event.summary}</p>
+    <div className="ai-audit-meta"><span>Actor <b>{event.actorId}</b></span><span>Target <b>{event.targetId}</b></span><span>Source <b className="mono">{event.sourceIp}</b></span></div>
+    <EvidenceIds ids={[event.id]} />
+  </article>;
+}
+
+function AiInvestigationResults({ result }: { result: AiInvestigationResponse }) {
+  return <div className="ai-results" data-testid="ai-investigation-results">
+    <div className="ai-results-topline">
+      <div><span className="ai-source-label"><BrainCircuit size={14} /> MODEL ANALYSIS</span><span className="ai-model-id" data-testid="ai-model-id">{result.modelId}</span></div>
+      <span className="ai-engine-label"><ShieldCheck size={14} /> CONTAINMENT VERIFIED BY ENGINE</span>
+    </div>
+
+    <section className="ai-result-section" data-testid="ai-findings">
+      <div className="ai-section-title"><div><ListChecks size={15} /><h3>Findings</h3></div><span>{result.findings.length} returned</span></div>
+      {result.findings.length ? <div className="ai-findings-list">{result.findings.map((finding, index) => <article className="ai-finding" key={`${finding.kind}-${index}`} data-testid={`ai-finding-${index}`}>
+        <span className={`finding-kind ${finding.kind === 'verified-fact' ? 'finding-fact' : 'finding-hypothesis'}`}>{finding.kind === 'verified-fact' ? 'VERIFIED FACT' : 'MODEL HYPOTHESIS'}</span>
+        <p>{finding.text}</p><EvidenceIds ids={finding.evidenceIds} />
+      </article>)}</div> : <div className="ai-empty-state" data-testid="ai-findings-empty">No findings were returned.</div>}
+    </section>
+
+    <section className="ai-result-section" data-testid="ai-tool-executions">
+      <div className="ai-section-title"><div><Workflow size={15} /><h3>Investigation trace</h3></div><span>{result.toolExecutions.length} tool executions</span></div>
+      {result.toolExecutions.length ? <ol className="ai-tool-list">{result.toolExecutions.map((execution, index) => <li className="ai-tool-row" key={`${execution.toolName}-${index}`} data-testid={`ai-tool-execution-${index}`}>
+        <span className={`ai-tool-status ${execution.status === 'success' ? 'tool-success' : 'tool-rejected'}`}>{execution.status === 'success' ? <Check size={13} /> : <X size={13} />}</span>
+        <div className="ai-tool-copy"><code>{execution.toolName}</code><span>{execution.summary}</span><EvidenceIds ids={execution.evidenceIds} /></div>
+        <span className={`tool-status-label ${execution.status === 'success' ? 'tool-success-text' : 'tool-rejected-text'}`}>{execution.status}</span>
+      </li>)}</ol> : <div className="ai-empty-state" data-testid="ai-tools-empty">No tool executions were returned.</div>}
+    </section>
+
+    <section className="ai-result-section" data-testid="ai-inspected-evidence">
+      <div className="ai-section-title"><div><FileSearch size={15} /><h3>Inspected evidence</h3></div><span>{result.inspectedEvidence.length} audit events</span></div>
+      {result.inspectedEvidence.length ? <div className="ai-audit-grid">{result.inspectedEvidence.map((event) => <AiAuditEvent key={event.id} event={event} />)}</div> : <div className="ai-empty-state" data-testid="ai-evidence-empty">No audit evidence was inspected.</div>}
+    </section>
+
+    <section className="ai-result-section" data-testid="ai-candidate-actions">
+      <div className="ai-section-title"><div><ScanSearch size={15} /><h3>Proposed containment candidates</h3></div><span>{result.candidateActions.length} candidates</span></div>
+      {result.candidateActions.length ? <div className="ai-candidate-list">{result.candidateActions.map((action) => <article className="ai-candidate" key={action.id} data-testid={`ai-candidate-action-${action.id}`}>
+        <div><span className="action-category">{action.category}</span><strong>{action.title}</strong><p>{action.description}</p><small><ArrowRight size={12} />{action.expectedEffect}</small></div>
+        <span className="ai-edge-count">{action.edgeIds.length} {action.edgeIds.length === 1 ? 'edge' : 'edges'}<br />affected</span>
+      </article>)}</div> : <div className="ai-empty-state" data-testid="ai-candidates-empty">No candidate actions were returned.</div>}
+    </section>
+
+    <section className="ai-result-section" data-testid="ai-simulations">
+      <div className="ai-section-title"><div><FlaskConical size={15} /><h3>Action simulations</h3></div><span>{result.simulations.length} simulations</span></div>
+      {result.simulations.length ? <div className="ai-simulation-list">{result.simulations.map((simulation, index) => <article className={`ai-simulation ${simulation.verification.status === 'verified-contained' ? 'simulation-contained' : 'simulation-incomplete'}`} key={`${simulation.action.id}-${index}`} data-testid={`ai-simulation-${index}`}>
+        <div className="ai-simulation-heading"><div><span className="eyebrow">ENGINE SIMULATION</span><strong>{simulation.action.title}</strong></div><span className="ai-simulation-status">{simulation.verification.status === 'verified-contained' ? 'VERIFIED CONTAINED' : 'INCOMPLETE'}</span></div>
+        <div className="ai-simulation-metrics"><span><b>{simulation.verification.verifiedClosedPaths.length}</b> paths closed</span><span><b>{simulation.verification.remainingReachablePaths.length}</b> still reachable</span><span><b>{simulation.verification.unresolvedFindings.length}</b> unresolved findings</span></div>
+        {simulation.verification.remainingReachablePaths.length > 0 && <div className="ai-path-results">{simulation.verification.remainingReachablePaths.map((path) => <span key={path.id}><ArrowRight size={12} />{path.label}</span>)}</div>}
+        {simulation.verification.unresolvedFindings.length > 0 && <ul className="ai-unresolved-list">{simulation.verification.unresolvedFindings.map((finding, findingIndex) => <li key={`${findingIndex}-${finding}`}>{finding}</li>)}</ul>}
+      </article>)}</div> : <div className="ai-empty-state" data-testid="ai-simulations-empty">No action simulations were returned.</div>}
+    </section>
+
+    <section className="ai-explanation" data-testid="ai-model-explanation">
+      <div className="ai-explanation-heading"><Cpu size={16} /><div><span className="eyebrow">MODEL EXPLANATION</span><strong>Analysis narrative</strong></div></div>
+      <p>{result.explanation}</p>
+      <span className="ai-boundary-note">Model analysis is advisory. Containment status below is independently recomputed by the deterministic verification engine.</span>
+    </section>
+
+    <ReportPanel report={result.verification} reportId="ai-final-verification" eyebrow="ENGINE VERIFIED · FINAL REPORT" testId="ai-final-verification-report" />
+  </div>;
+}
+
 export default function Investigation() {
   const incidentQuery = useGetCurrentIncident({ query: { queryKey: getGetCurrentIncidentQueryKey() } });
   const remediationsQuery = useGetIncidentRemediations({ query: { queryKey: getGetIncidentRemediationsQueryKey() } });
   const simulation = useSimulateContainment();
+  const aiInvestigation = useRunAiIncidentInvestigation();
   const [selected, setSelected] = useState<ActionId[]>([]);
   const [selectionInitialized, setSelectionInitialized] = useState(false);
   const [report, setReport] = useState<VerificationReport | null>(null);
@@ -154,6 +230,10 @@ export default function Investigation() {
       },
       onError: () => setReport(null),
     });
+  };
+  const runAiInvestigation = () => {
+    aiInvestigation.reset();
+    aiInvestigation.mutate();
   };
 
   if (incidentQuery.isLoading) return <Skeleton />;
@@ -191,7 +271,7 @@ export default function Investigation() {
       <div className="content">
         <section className="incident-hero">
           <div className="hero-meta"><span className="eyebrow">IDENTITY INCIDENT</span><span className="status-pill"><i />{incident.status}</span><span className="severity-pill">{incident.severity} severity</span></div>
-          <div className="hero-main"><div><h1>{incident.title}</h1><p>{incident.summary}</p></div><button className={`button-primary investigate-button ${investigated ? 'button-done' : ''}`} onClick={investigate} data-testid="button-investigate-incident">{investigated ? <CheckCircle2 size={16} /> : <ArrowDown size={16} />}{investigated ? 'Evidence in focus' : 'Investigate incident'}</button></div>
+          <div className="hero-main"><div><h1>{incident.title}</h1><p>{incident.summary}</p></div><div className="hero-actions"><button className={`button-primary investigate-button ${investigated ? 'button-done' : ''}`} onClick={investigate} data-testid="button-investigate-incident">{investigated ? <CheckCircle2 size={16} /> : <ArrowDown size={16} />}{investigated ? 'Evidence in focus' : 'Investigate incident'}</button><button className="button-ai-investigate" onClick={runAiInvestigation} disabled={aiInvestigation.isPending} data-testid="button-ai-investigate"><BrainCircuit size={16} />{aiInvestigation.isPending ? 'Investigation running…' : 'AI Investigate'}<ArrowRight size={14} /></button></div></div>
           <div className="incident-facts"><span><span className="fact-label">INCIDENT</span><strong className="mono">{incident.id}</strong></span><span><span className="fact-label">DETECTED</span><strong><Clock3 size={13} />{timeLabel(incident.detectedAt)}</strong></span><span><span className="fact-label">IDENTITIES</span><strong>{snapshot.identities.length} observed</strong></span><span><span className="fact-label">ATTACK PATHS</span><strong>{snapshot.attackPaths.length} reconstructed</strong></span></div>
         </section>
 
@@ -201,6 +281,17 @@ export default function Investigation() {
             <div className="panel graph-panel"><div className="panel-heading"><div><h3>Identity reachability</h3><p>Relationships that form a route into sensitive resources</p></div><span className="live-tag"><i /> SOURCE GRAPH</span></div><EvidenceGraph snapshot={snapshot} activePath={focused} /><div className="graph-footnote"><LockKeyhole size={14} /> Paths are reconstructed from enabled relationships and observed evidence.</div></div>
             <div className="paths-panel"><div className="panel-heading"><div><h3>Reconstructed paths</h3><p>Select a path to trace it in the graph</p></div><span className="count-chip">{snapshot.attackPaths.length}</span></div><div className="path-list">{snapshot.attackPaths.length ? snapshot.attackPaths.map((path) => <PathCard key={path.id} path={path} focused={focusedPath === path.id} onFocus={() => setFocusedPath((current) => current === path.id ? null : path.id)} />) : <div className="empty-path"><Network size={18} /><p>No attack paths were returned for this scenario.</p></div>}</div><div className="path-callout"><AlertTriangle size={15} /><p><strong>Session revocation is not enough.</strong> The separate app-consent route can remain reachable until that relationship is also removed in the simulation.</p></div></div>
           </div>
+        </section>
+
+        <section className="ai-workspace workspace-section" id="ai-investigation" data-testid="ai-investigation-workspace">
+          <div className="section-heading"><div><span className="section-index ai-index"><BrainCircuit size={15} /></span><div><span className="eyebrow">ASSISTED INVESTIGATION</span><h2>AI investigation trace</h2></div></div><span className="section-caption"><ShieldCheck size={14} /> Model analysis separated from engine verification</span></div>
+          {!aiInvestigation.data && !aiInvestigation.isPending && !aiInvestigation.isError && <div className="ai-launch-panel" data-testid="ai-investigation-intro">
+            <div className="ai-launch-mark"><BrainCircuit size={19} /></div><div><strong>Run a tool-backed investigation</strong><p>TraceLock will return model findings alongside allowlisted tool executions, inspected evidence, action simulations, and an independent containment report.</p></div>
+            <button className="button-ai-investigate" onClick={runAiInvestigation} data-testid="button-ai-investigate-panel">Run investigation<ArrowRight size={14} /></button>
+          </div>}
+          {aiInvestigation.isPending && <div className="ai-loading-state" role="status" data-testid="ai-investigation-loading"><span className="ai-loading-mark"><BrainCircuit size={18} /></span><div><strong>Investigation request in progress</strong><p>Waiting for the investigation provider and verification engine to return a result. No progress is inferred before the response.</p></div><span className="ai-pending-tag">REQUEST PENDING</span></div>}
+          {aiInvestigation.isError && <div className="ai-error-state" role="alert" data-testid="ai-investigation-error"><div><AlertTriangle size={17} /><span><strong>AI investigation could not be completed</strong><small>{aiInvestigation.error instanceof Error ? aiInvestigation.error.message : 'The provider or API returned an error. No investigation results are available.'}</small></span></div><button className="button-ai-investigate" onClick={runAiInvestigation} data-testid="button-retry-ai-investigation"><RotateCcw size={14} /> Retry investigation</button></div>}
+          {aiInvestigation.data && !aiInvestigation.isPending && <AiInvestigationResults result={aiInvestigation.data} />}
         </section>
 
         <section className="workspace-section evidence-events">

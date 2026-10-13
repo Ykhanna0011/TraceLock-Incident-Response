@@ -137,6 +137,63 @@ export interface VerificationReport {
   assumptions: string[];
 }
 
+export type AiToolName = typeof AiToolName[keyof typeof AiToolName];
+
+
+export const AiToolName = {
+  get_incident_timeline: 'get_incident_timeline',
+  enumerate_attack_paths: 'enumerate_attack_paths',
+  inspect_identity: 'inspect_identity',
+  simulate_remediation: 'simulate_remediation',
+  verify_containment: 'verify_containment',
+} as const;
+
+export type AiToolExecutionStatus = typeof AiToolExecutionStatus[keyof typeof AiToolExecutionStatus];
+
+
+export const AiToolExecutionStatus = {
+  success: 'success',
+  rejected: 'rejected',
+} as const;
+
+export interface AiToolExecution {
+  toolName: AiToolName;
+  status: AiToolExecutionStatus;
+  summary: string;
+  evidenceIds: string[];
+}
+
+export type AiInvestigationFindingKind = typeof AiInvestigationFindingKind[keyof typeof AiInvestigationFindingKind];
+
+
+export const AiInvestigationFindingKind = {
+  'verified-fact': 'verified-fact',
+  'model-hypothesis': 'model-hypothesis',
+} as const;
+
+export interface AiInvestigationFinding {
+  kind: AiInvestigationFindingKind;
+  text: string;
+  /** @minItems 1 */
+  evidenceIds: string[];
+}
+
+export interface AiInvestigationSimulation {
+  action: RemediationAction;
+  verification: VerificationReport;
+}
+
+export interface AiInvestigationResponse {
+  modelId: string;
+  explanation: string;
+  findings: AiInvestigationFinding[];
+  toolExecutions: AiToolExecution[];
+  inspectedEvidence: AuditEvent[];
+  candidateActions: RemediationAction[];
+  simulations: AiInvestigationSimulation[];
+  verification: VerificationReport;
+}
+
 export interface ErrorResponse {
   error: string;
 }
