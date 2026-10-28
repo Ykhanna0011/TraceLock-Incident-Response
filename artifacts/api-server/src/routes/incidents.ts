@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import {
   GetCurrentIncidentResponse,
   GetIncidentRemediationsResponse,
+  RunAiIncidentInvestigationResponse,
   SimulateContainmentBody,
   SimulateContainmentResponse,
 } from "@workspace/api-zod";
@@ -10,6 +11,8 @@ import {
   getIncidentSnapshot,
   simulateContainment,
 } from "../lib/incident-engine";
+import { runAiInvestigation } from "../lib/ai-investigation";
+import { createNebiusClient, NebiusClientError } from "../lib/nebius-client";
 
 const router: IRouter = Router();
 
@@ -33,6 +36,22 @@ router.post("/incidents/current/simulations", (req, res) => {
 
   const report = simulateContainment(parsed.data.actionIds);
   res.json(SimulateContainmentResponse.parse(report));
+});
+
+router.post("/incidents/current/ai-investigations", async (req, res) => {
+  try {
+    const result = await runAiInvestigation(createNebiusClient());
+    res.json(RunAiIncidentInvestigationResponse.parse(result));
+  } catch (error) {
+    if (error instanceof NebiusClientError) {
+      req.log.warn({ code: error.code }, "AI investigation provider request failed");
+      res.status(error.statusCode).json({ error: error.message });
+      return;
+    }
+
+    req.log.error("AI investigation failed unexpectedly");
+    res.status(502).json({ error: "The investigation could not be completed." });
+  }
 });
 
 export default router;

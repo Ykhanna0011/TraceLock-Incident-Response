@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 export const NEBIUS_BASE_URL = "https://api.tokenfactory.nebius.com/v1";
 export const NEBIUS_MODEL_ID = "nvidia/Nemotron-3_5-Lightning";
 const DEFAULT_TIMEOUT_MS = 30_000;
+const MAX_PROVIDER_RESPONSE_BYTES = 64 * 1024;
 
 export type ChatToolCall = {
   id: string;
@@ -18,7 +19,7 @@ export type ChatMessage = {
   content: string | null;
   name?: string;
   tool_call_id?: string;
-  tool_calls?: ChatToolCall[];
+  tool_calls?: ChatToolCall[] | null;
 };
 
 export type ChatTool = {
@@ -48,13 +49,13 @@ const ProviderResponseSchema = z.object({
       role: z.string(),
       content: z.union([z.string(), z.null()]).optional(),
       tool_calls: z.array(z.object({
-        id: z.string(),
-        type: z.string(),
+        id: z.string().min(1).max(128),
+        type: z.literal("function"),
         function: z.object({
-          name: z.string(),
-          arguments: z.string(),
+          name: z.string().min(1).max(100),
+          arguments: z.string().max(2_048),
         }),
-      }).passthrough()).optional(),
+      }).passthrough()).max(8).nullable().optional(),
     }).passthrough(),
   }).passthrough()).min(1),
 }).passthrough();
@@ -62,20 +63,71 @@ const ProviderResponseSchema = z.object({
 export type ChatCompletionResponse = z.infer<typeof ProviderResponseSchema>;
 
 export class NebiusClientError extends Error {
+  readonly statusCode: number;
+  readonly code: "missing-api-key" | "rate-limited" | "timeout" | "provider-error" | "invalid-response";
+  readonly upstreamStatus?: number;
+
   constructor(
     message: string,
-    readonly statusCode: number,
-    readonly code: "missing-api-key" | "rate-limited" | "timeout" | "provider-error" | "invalid-response",
-    readonly upstreamStatus?: number,
+    statusCode: number,
+    code: "missing-api-key" | "rate-limited" | "timeout" | "provider-error" | "invalid-response",
+    upstreamStatus?: number,
   ) {
     super(message);
     this.name = "NebiusClientError";
+    this.statusCode = statusCode;
+    this.code = code;
+    this.upstreamStatus = upstreamStatus;
   }
 }
 
 export type NebiusChatClient = {
   complete(options: ChatCompletionOptions): Promise<ChatCompletionResponse>;
 };
+
+async function readProviderResponse(response: Response): Promise<string> {
+  const contentLength = Number(response.headers.get("content-length"));
+  if (Number.isFinite(contentLength) && contentLength > MAX_PROVIDER_RESPONSE_BYTES) {
+    throw new NebiusClientError(
+      "Nebius returned a response that exceeded the allowed size.",
+      502,
+      "invalid-response",
+      response.status,
+    );
+  }
+  if (!response.body) return "";
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_PROVIDER_RESPONSE_BYTES) {
+        await reader.cancel();
+        throw new NebiusClientError(
+          "Nebius returned a response that exceeded the allowed size.",
+          502,
+          "invalid-response",
+          response.status,
+        );
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
+}
 
 export function createNebiusClient(options: {
   apiKey?: string;
@@ -154,8 +206,17 @@ export function createNebiusClient(options: {
 
       let payload: unknown;
       try {
-        payload = await response.json();
-      } catch {
+        payload = JSON.parse(await readProviderResponse(response));
+      } catch (error) {
+        if (error instanceof NebiusClientError) throw error;
+        const errorName = error instanceof Error ? error.name : "";
+        if (errorName === "TimeoutError" || errorName === "AbortError") {
+          throw new NebiusClientError(
+            "Nemotron did not respond before the request timed out.",
+            504,
+            "timeout",
+          );
+        }
         throw new NebiusClientError(
           "Nebius returned an unreadable model response.",
           502,
