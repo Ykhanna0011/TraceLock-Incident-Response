@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: tracelock-api
+    runtime: node
+    plan: free
+    buildCommand: pnpm install --frozen-lockfile && NODE_ENV=production PORT=3000 BASE_PATH=/ pnpm build
+    startCommand: pnpm --filter @workspace/api-server start
+    healthCheckPath: /api/healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NEBIUS_API_KEY
+        sync: false
+
+  - type: web
+    name: tracelock-frontend
+    runtime: static
+    buildCommand: pnpm install --frozen-lockfile && NODE_ENV=production PORT=3000 BASE_PATH=/ pnpm build
+    staticPublishPath: artifacts/tracelock/dist/public
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: VITE_API_HOST
+        fromService:
+          type: web
+          name: tracelock-api
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
