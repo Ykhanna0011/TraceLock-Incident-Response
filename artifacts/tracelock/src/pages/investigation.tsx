@@ -150,6 +150,18 @@ function AiInvestigationResults({ result }: { result: AiInvestigationResponse })
       </article>)}</div> : <div className="ai-empty-state" data-testid="ai-findings-empty">No findings were returned.</div>}
     </section>
 
+    <section className="ai-result-section" data-testid="ai-external-intelligence">
+      <div className="ai-section-title"><div><ShieldAlert size={15} /><h3>External threat intelligence</h3></div><span>{result.externalIntelligence.length} untrusted sources</span></div>
+      <p className="ai-intel-warning">Tavily search results are untrusted external intelligence, not original incident evidence or proof that an indicator is malicious.</p>
+      {result.externalIntelligence.length ? <div className="ai-intel-list">{result.externalIntelligence.map((source) => <article className="ai-intel-card" key={source.id} data-testid={`ai-external-source-${source.id}`}>
+        <div className="ai-intel-meta"><code>{source.indicator}</code><span>{source.publishedAt ? `Published ${source.publishedAt}` : 'Publication date unavailable'}{source.relevanceScore !== null ? ` · relevance ${source.relevanceScore.toFixed(2)}` : ''}</span></div>
+        <strong>{source.title}</strong>
+        <p>{source.excerpt}</p>
+        <a href={source.url} target="_blank" rel="noopener noreferrer">{source.url}</a>
+        <EvidenceIds ids={[source.id]} />
+      </article>)}</div> : <div className="ai-empty-state">No external threat-intelligence sources were returned.</div>}
+    </section>
+
     <section className="ai-result-section" data-testid="ai-tool-executions">
       <div className="ai-section-title"><div><Workflow size={15} /><h3>Investigation trace</h3></div><span>{result.toolExecutions.length} tool executions</span></div>
       {result.toolExecutions.length ? <ol className="ai-tool-list">{result.toolExecutions.map((execution, index) => <li className="ai-tool-row" key={`${execution.toolName}-${index}`} data-testid={`ai-tool-execution-${index}`}>

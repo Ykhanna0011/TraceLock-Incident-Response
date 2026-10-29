@@ -144,6 +144,7 @@ export const AiToolName = {
   get_incident_timeline: 'get_incident_timeline',
   enumerate_attack_paths: 'enumerate_attack_paths',
   inspect_identity: 'inspect_identity',
+  lookup_threat_intelligence: 'lookup_threat_intelligence',
   simulate_remediation: 'simulate_remediation',
   verify_containment: 'verify_containment',
 } as const;
@@ -178,6 +179,34 @@ export interface AiInvestigationFinding {
   evidenceIds: string[];
 }
 
+export type ExternalThreatIntelligenceProvenance = typeof ExternalThreatIntelligenceProvenance[keyof typeof ExternalThreatIntelligenceProvenance];
+
+
+export const ExternalThreatIntelligenceProvenance = {
+  'external-intelligence': 'external-intelligence',
+} as const;
+
+export type ExternalThreatIntelligenceTrust = typeof ExternalThreatIntelligenceTrust[keyof typeof ExternalThreatIntelligenceTrust];
+
+
+export const ExternalThreatIntelligenceTrust = {
+  untrusted: 'untrusted',
+} as const;
+
+export interface ExternalThreatIntelligence {
+  id: string;
+  indicator: string;
+  title: string;
+  url: string;
+  excerpt: string;
+  /** @nullable */
+  publishedAt: string | null;
+  /** @nullable */
+  relevanceScore: number | null;
+  provenance: ExternalThreatIntelligenceProvenance;
+  trust: ExternalThreatIntelligenceTrust;
+}
+
 export interface AiInvestigationSimulation {
   action: RemediationAction;
   verification: VerificationReport;
@@ -188,6 +217,8 @@ export interface AiInvestigationResponse {
   explanation: string;
   findings: AiInvestigationFinding[];
   toolExecutions: AiToolExecution[];
+  /** Untrusted web search results; these are not original incident evidence or proof of malicious activity. */
+  externalIntelligence: ExternalThreatIntelligence[];
   inspectedEvidence: AuditEvent[];
   candidateActions: RemediationAction[];
   simulations: AiInvestigationSimulation[];

@@ -11,6 +11,8 @@ services:
         value: production
       - key: NEBIUS_API_KEY
         sync: false
+      - key: TAVILY_API_KEY
+        sync: false
 
   - type: web
     name: tracelock-frontend

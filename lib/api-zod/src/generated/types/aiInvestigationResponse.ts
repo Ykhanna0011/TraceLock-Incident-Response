@@ -9,6 +9,7 @@ import type { AiInvestigationFinding } from './aiInvestigationFinding';
 import type { AiInvestigationSimulation } from './aiInvestigationSimulation';
 import type { AiToolExecution } from './aiToolExecution';
 import type { AuditEvent } from './auditEvent';
+import type { ExternalThreatIntelligence } from './externalThreatIntelligence';
 import type { RemediationAction } from './remediationAction';
 import type { VerificationReport } from './verificationReport';
 
@@ -17,6 +18,8 @@ export interface AiInvestigationResponse {
   explanation: string;
   findings: AiInvestigationFinding[];
   toolExecutions: AiToolExecution[];
+  /** Untrusted web search results; these are not original incident evidence or proof of malicious activity. */
+  externalIntelligence: ExternalThreatIntelligence[];
   inspectedEvidence: AuditEvent[];
   candidateActions: RemediationAction[];
   simulations: AiInvestigationSimulation[];

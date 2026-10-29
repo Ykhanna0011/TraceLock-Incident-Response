@@ -387,7 +387,7 @@ export const getRunAiIncidentInvestigationUrl = () => {
 }
 
 /**
- * Executes allowlisted application tools and returns model analysis alongside independently recomputed graph verification.
+ * Executes allowlisted application tools, optionally enriches a synthetic timeline IP with Tavily search results labeled as untrusted external intelligence, and returns model analysis alongside independently recomputed graph verification.
  * @summary Run a Nemotron-assisted synthetic incident investigation
  */
 export const runAiIncidentInvestigation = async ( options?: Parameters<typeof customFetch>[1]): Promise<AiInvestigationResponse> => {

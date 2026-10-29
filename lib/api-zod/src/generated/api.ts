@@ -139,7 +139,7 @@ export const SimulateContainmentResponse = zod.object({
 
 
 /**
- * Executes allowlisted application tools and returns model analysis alongside independently recomputed graph verification.
+ * Executes allowlisted application tools, optionally enriches a synthetic timeline IP with Tavily search results labeled as untrusted external intelligence, and returns model analysis alongside independently recomputed graph verification.
  * @summary Run a Nemotron-assisted synthetic incident investigation
  */
 
@@ -154,11 +154,22 @@ export const RunAiIncidentInvestigationResponse = zod.object({
   "evidenceIds": zod.array(zod.string()).min(1)
 })),
   "toolExecutions": zod.array(zod.object({
-  "toolName": zod.enum(['get_incident_timeline', 'enumerate_attack_paths', 'inspect_identity', 'simulate_remediation', 'verify_containment']),
+  "toolName": zod.enum(['get_incident_timeline', 'enumerate_attack_paths', 'inspect_identity', 'lookup_threat_intelligence', 'simulate_remediation', 'verify_containment']),
   "status": zod.enum(['success', 'rejected']),
   "summary": zod.string(),
   "evidenceIds": zod.array(zod.string())
 })),
+  "externalIntelligence": zod.array(zod.object({
+  "id": zod.string(),
+  "indicator": zod.string(),
+  "title": zod.string(),
+  "url": zod.string().url(),
+  "excerpt": zod.string(),
+  "publishedAt": zod.string().nullable(),
+  "relevanceScore": zod.number().nullable(),
+  "provenance": zod.enum(['external-intelligence']),
+  "trust": zod.enum(['untrusted'])
+})).describe('Untrusted web search results; these are not original incident evidence or proof of malicious activity.'),
   "inspectedEvidence": zod.array(zod.object({
   "id": zod.string(),
   "timestamp": zod.coerce.date(),

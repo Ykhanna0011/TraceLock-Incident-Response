@@ -13,6 +13,7 @@ export const AiToolName = {
   get_incident_timeline: 'get_incident_timeline',
   enumerate_attack_paths: 'enumerate_attack_paths',
   inspect_identity: 'inspect_identity',
+  lookup_threat_intelligence: 'lookup_threat_intelligence',
   simulate_remediation: 'simulate_remediation',
   verify_containment: 'verify_containment',
 } as const;
